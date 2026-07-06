@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulator Kaidah Segiempat — Metode Pias</title>
+<style>
+  :root{
+    --blueprint:#0A2A40; --blueprint-deep:#071D2E;
+    --grid:#163E59; --grid-strong:#1F5478;
+    --paper:#F4EFE3; --paper-edge:#DCD2B4;
+    --ink:#16242F; --ink-soft:#4B5C6B;
+    --accent:#E8833A; --accent-dim:rgba(232,131,58,0.18);
+    --teal:#5FB893; --teal-dim:rgba(95,184,147,0.30);
+    --danger:#E2574C; --warn:#D4A017;
+    --offwhite:#EAF2F8; --offwhite-dim:rgba(234,242,248,0.62);
+    font-variant-numeric: tabular-nums;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background-color:var(--blueprint);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:26px 26px; color:var(--offwhite);
+    font-family:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;
+    min-height:100vh; padding:30px 16px 70px;
+  }
+  .wrap{ max-width:1180px; margin:0 auto; }
+
+  /* nav */
+  .nav{ display:flex; gap:10px; margin-bottom:22px; flex-wrap:wrap; }
+  .nav-link{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:10px 18px; border-radius:3px; font-size:13px; font-weight:700;
+    letter-spacing:.02em; text-decoration:none; border:1.5px solid transparent;
+    transition:border-color .15s,background .15s,color .15s;
+  }
+  .nav-link.active{
+    background:var(--accent); color:#1A1003; border-color:var(--accent);
+  }
+  .nav-link.inactive{
+    background:transparent; color:var(--offwhite-dim); border-color:var(--grid-strong);
+  }
+  .nav-link.inactive:hover{ border-color:var(--accent); color:var(--offwhite); }
+
+  /* header */
+  .eyebrow{ text-transform:uppercase; letter-spacing:.16em; font-size:11px; font-weight:700; color:var(--accent); margin:0 0 8px; }
+  h1{ font-size:clamp(26px,3.6vw,38px); line-height:1.08; letter-spacing:-0.01em; margin:0 0 10px; font-weight:800; color:var(--offwhite); }
+  h1 span{ color:var(--accent); }
+  .sub{ color:var(--offwhite-dim); font-size:14.5px; max-width:620px; line-height:1.55; margin:0 0 22px; }
+
+  /* variant toggle */
+  .variant-row{ display:flex; gap:8px; margin-bottom:16px; }
+  .vbtn{
+    flex:1; appearance:none; border:1.5px solid var(--ink); background:transparent;
+    color:var(--ink); padding:8px 10px; border-radius:3px; font-size:12.5px;
+    font-weight:700; cursor:pointer; transition:background .15s,color .15s;
+  }
+  .vbtn[aria-pressed="true"]{ background:var(--ink); color:var(--paper); }
+  .vbtn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  /* presets */
+  .presets{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px; }
+  .chip{
+    appearance:none; border:1px dashed var(--ink-soft); background:transparent;
+    color:var(--ink-soft); font-size:11.5px; padding:6px 9px; border-radius:20px;
+    cursor:pointer; font-family:inherit; transition:border-color .15s,color .15s;
+  }
+  .chip:hover{ border-color:var(--accent); color:var(--ink); }
+
+  /* layout */
+  .layout{ display:grid; grid-template-columns:340px 1fr; gap:20px; align-items:start; }
+  @media(max-width:880px){ .layout{ grid-template-columns:1fr; } }
+
+  /* panels */
+  .panel{ background:var(--paper); color:var(--ink); border-radius:5px; padding:22px 22px 24px; box-shadow:0 18px 36px -14px rgba(0,0,0,.5); }
+  .panel+.panel{ margin-top:18px; }
+  .panel-dark{ background:var(--blueprint-deep); color:var(--offwhite); border-radius:5px; padding:20px; border:1px solid var(--grid-strong); }
+  .panel-title{ font-size:11px; text-transform:uppercase; letter-spacing:.12em; font-weight:800; color:var(--ink-soft); margin:0 0 14px; }
+  .panel-dark .panel-title{ color:var(--offwhite-dim); }
+
+  /* fields */
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; color:var(--ink-soft); margin-bottom:6px; }
+  .field input{
+    width:100%; border:none; border-bottom:2px solid var(--ink); background:transparent;
+    font:16px/1.4 "SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    padding:7px 2px; color:var(--ink);
+  }
+  .field input:focus{ outline:none; border-bottom-color:var(--accent); }
+  .field input.auto-filled{ border-bottom-color:var(--teal); }
+  .field input::placeholder{ color:rgba(22,36,47,.35); }
+  .field .hint{ font-size:10.5px; color:var(--ink-soft); margin-top:4px; font-style:italic; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .row2-linked{ display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:end; }
+  .link-icon{ font-size:18px; color:var(--teal); padding-bottom:10px; user-select:none; }
+
+  /* buttons */
+  .btn-row{ display:flex; gap:10px; margin-top:6px; }
+  .btn-primary{ flex:1; background:var(--ink); color:var(--paper); border:none; border-radius:3px; padding:13px 16px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; font-size:12.5px; cursor:pointer; transition:background .15s; }
+  .btn-primary:hover{ background:#2a3b4b; }
+  .btn-ghost{ background:transparent; color:var(--ink-soft); border:1.5px solid var(--paper-edge); border-radius:3px; padding:13px 14px; font-size:12.5px; font-weight:700; cursor:pointer; transition:border-color .15s,color .15s; }
+  .btn-ghost:hover{ border-color:var(--ink-soft); color:var(--ink); }
+
+  /* status */
+  .status{ margin-top:14px; font-size:12.5px; line-height:1.5; border-radius:3px; padding:10px 12px; display:none; }
+  .status.show{ display:block; }
+  .status.error{ background:rgba(226,87,76,.12); color:#9B2B22; border:1px solid rgba(226,87,76,.4); }
+
+  /* formula */
+  .formula-box{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .formula-main{ font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace; font-size:17px; color:var(--accent); letter-spacing:.01em; }
+  .formula-desc{ font-size:12.5px; color:var(--offwhite-dim); margin-top:6px; max-width:480px; line-height:1.5; }
+  .order-tag{ font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--blueprint-deep); background:var(--teal); padding:5px 10px; border-radius:3px; white-space:nowrap; }
+
+  /* result cards */
+  .result-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:16px; }
+  @media(max-width:560px){ .result-grid{ grid-template-columns:1fr; } }
+  .result-card{ background:rgba(234,242,248,.05); border:1px solid var(--grid-strong); border-radius:4px; padding:14px 16px; }
+  .result-card .label{ font-size:10.5px; text-transform:uppercase; letter-spacing:.1em; color:var(--offwhite-dim); font-weight:700; margin-bottom:6px; white-space:normal; line-height:1.4; }
+  .result-card .value{ font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace; font-size:22px; color:var(--offwhite); }
+  .result-card.accent .value{ color:var(--accent); }
+  .result-card.err-card .value{ font-size:18px; }
+
+  /* accuracy bar */
+  .accuracy-bar{ margin-top:14px; border-radius:4px; padding:12px 14px; border:1px solid; }
+  .accuracy-bar.good{ background:rgba(95,184,147,.10); border-color:rgba(95,184,147,.4); }
+  .accuracy-bar.warn{ background:rgba(212,160,23,.10); border-color:rgba(212,160,23,.4); }
+  .accuracy-bar.bad{ background:rgba(226,87,76,.10); border-color:rgba(226,87,76,.4); }
+  .accuracy-bar .acc-label{ font-size:10.5px; text-transform:uppercase; letter-spacing:.1em; font-weight:800; margin-bottom:5px; }
+  .accuracy-bar.good .acc-label{ color:var(--teal); }
+  .accuracy-bar.warn .acc-label{ color:var(--warn); }
+  .accuracy-bar.bad .acc-label{ color:var(--danger); }
+  .accuracy-bar .acc-msg{ font-size:12px; color:var(--offwhite-dim); line-height:1.5; }
+  .accuracy-bar .acc-suggest{ font-size:11.5px; margin-top:6px; color:var(--offwhite-dim); }
+  .acc-track{ background:rgba(255,255,255,.08); border-radius:10px; height:6px; margin:8px 0; overflow:hidden; }
+  .acc-fill{ height:6px; border-radius:10px; transition:width .4s; }
+  .good .acc-fill{ background:var(--teal); }
+  .warn .acc-fill{ background:var(--warn); }
+  .bad .acc-fill{ background:var(--danger); }
+
+  .error-note{ margin-top:10px; font-size:11.5px; color:var(--offwhite-dim); line-height:1.5; }
+
+  /* graph */
+  .graph-wrap{ margin-top:18px; }
+  .legend{ display:flex; gap:18px; margin-top:10px; flex-wrap:wrap; }
+  .legend-item{ display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--offwhite-dim); }
+  .legend-swatch{ width:16px; border-radius:2px; display:inline-block; }
+  .legend-swatch.line{ background:var(--accent); height:3px; }
+  .legend-swatch.fill{ background:var(--teal-dim); border:1px solid var(--teal); height:12px; }
+
+  /* table */
+  .table-scroll{ max-height:360px; overflow-y:auto; margin-top:10px; border:1px solid var(--paper-edge); border-radius:4px; }
+  table{ width:100%; border-collapse:collapse; font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace; font-size:13px; }
+  thead th{ position:sticky; top:0; background:var(--ink); color:var(--paper); text-align:right; padding:9px 12px; font-size:11px; letter-spacing:.04em; text-transform:uppercase; font-weight:700; }
+  thead th:first-child,tbody td:first-child{ text-align:left; }
+  tbody td{ padding:7px 12px; text-align:right; color:var(--ink); border-bottom:1px solid rgba(22,36,47,.08); }
+  tbody tr:nth-child(even){ background:rgba(22,36,47,.035); }
+  tbody tr.ellipsis td{ text-align:center; color:var(--ink-soft); font-style:italic; }
+  tfoot td{ padding:10px 12px; font-weight:800; border-top:2px solid var(--ink); color:var(--ink); text-align:right; }
+  tfoot td:first-child{ text-align:left; }
+  .steps{ margin-top:14px; font-size:13px; color:var(--ink-soft); line-height:1.7; font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace; word-break:break-word; }
+  .footnote{ margin-top:26px; text-align:center; font-size:12px; color:var(--offwhite-dim); line-height:1.6; }
+  @media(prefers-reduced-motion:reduce){ *{ transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Navigasi antar file -->
+  <div class="nav">
+    <a class="nav-link active" href="kalkulator-segiempat.html">▪ Kaidah Segiempat</a>
+    <a class="nav-link inactive" href="kalkulator-titik-tengah.html">◦ Kaidah Titik Tengah</a>
+  </div>
+
+  <p class="eyebrow">Metode Numerik · Integrasi Pias</p>
+  <h1>Kaidah <span>Segiempat</span></h1>
+  <p class="sub">Pendekatan integral tentu dengan menjumlahkan luas segiempat pada setiap subinterval. Pilih varian <strong>Kiri</strong> (ujung kiri) atau <strong>Kanan</strong> (ujung kanan). Input h atau n saling otomatis menghitung satu sama lain.</p>
+
+  <div class="layout">
+    <!-- ===== KIRI: FORM ===== -->
+    <div>
+      <div class="panel">
+        <p class="panel-title">Parameter</p>
+
+        <!-- Kiri / Kanan -->
+        <div class="variant-row">
+          <button class="vbtn" id="vbtn-kiri" aria-pressed="true" onclick="setVariant('kiri')">Kiri</button>
+          <button class="vbtn" id="vbtn-kanan" aria-pressed="false" onclick="setVariant('kanan')">Kanan</button>
+        </div>
+
+        <!-- Preset -->
+        <p class="panel-title" style="margin-bottom:8px;">Contoh cepat</p>
+        <div class="presets" id="presets"></div>
+
+        <!-- Fungsi -->
+        <div class="field">
+          <label for="inputF">Fungsi f(x)</label>
+          <input id="inputF" type="text" placeholder="cth: x^2, sin(x), 4x^2-x+3" value="x^2">
+        </div>
+
+        <!-- Batas a & b -->
+        <div class="row2">
+          <div class="field">
+            <label for="inputA">Batas bawah (a)</label>
+            <input id="inputA" type="number" step="any" value="0" oninput="onBoundChange()">
+          </div>
+          <div class="field">
+            <label for="inputB">Batas atas (b)</label>
+            <input id="inputB" type="number" step="any" value="2" oninput="onBoundChange()">
+          </div>
+        </div>
+
+        <!-- n ↔ h linked -->
+        <div class="row2-linked">
+          <div class="field" style="margin-bottom:0">
+            <label for="inputN">Jumlah pias (n)</label>
+            <input id="inputN" type="number" step="1" min="1" value="8" oninput="onNChange()" class="auto-filled">
+          </div>
+          <div class="link-icon" title="n dan h saling terhubung">⇌</div>
+          <div class="field" style="margin-bottom:0">
+            <label for="inputH">Lebar pias (h)</label>
+            <input id="inputH" type="number" step="any" min="0" value="0.25" oninput="onHChange()">
+          </div>
+        </div>
+        <p class="hint" id="nhHint" style="margin-bottom:16px; font-size:10.5px; color:#4B5C6B; font-style:italic;">Ubah n → h otomatis dihitung, ubah h → n otomatis dihitung.</p>
+
+        <!-- Nilai eksak -->
+        <div class="field">
+          <label for="inputExact">Nilai eksak ∫f(x)dx (opsional)</label>
+          <input id="inputExact" type="number" step="any" placeholder="kosongkan jika tidak diketahui">
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-primary" onclick="compute()">Hitung</button>
+          <button class="btn-ghost" onclick="resetAll()">Reset</button>
+        </div>
+        <div class="status error" id="statusBox" role="alert" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <!-- ===== KANAN: HASIL ===== -->
+    <div>
+      <div class="panel-dark">
+        <p class="panel-title">Rumus aktif</p>
+        <div class="formula-box">
+          <div>
+            <div class="formula-main" id="formulaMain">I ≈ h · Σ f(xᵢ),  i = 0..n−1</div>
+            <div class="formula-main" style="font-size:13px; margin-top:6px;" id="formulaExpand"></div>
+            <div class="formula-desc" id="formulaDesc">Tinggi segiempat = nilai fungsi di ujung kiri setiap subinterval.</div>
+          </div>
+          <span class="order-tag" id="orderTag">Orde O(h)</span>
+        </div>
+
+        <!-- Desimal control untuk tampilan hasil -->
+        <div style="display:flex;justify-content:flex-end;margin-top:10px;margin-bottom:6px;">
+          <div class="dec-control" style="display:inline-flex;align-items:center;gap:8px;">
+            <div style="font-size:11px;color:var(--offwhite-dim);">Desimal</div>
+            <button id="seg-dec-minus" class="vbtn" style="padding:6px 10px;min-width:36px;" onclick="changeSegDecimals(-1)">−</button>
+            <div id="seg-dec-val" style="width:34px;text-align:center;font-weight:800;color:var(--offwhite);">6</div>
+            <button id="seg-dec-plus" class="vbtn" style="padding:6px 10px;min-width:36px;" onclick="changeSegDecimals(1)">+</button>
+          </div>
+        </div>
+
+        <!-- Hasil utama: h, I -->
+        <div class="result-grid">
+          <div class="result-card">
+            <div class="label">Lebar pias (h)</div>
+            <div class="value" id="valH">—</div>
+          </div>
+          <div class="result-card accent">
+            <div class="label">Nilai Integral (I)</div>
+            <div class="value" id="valI">—</div>
+          </div>
+        </div>
+
+        <!-- Galat -->
+        <div class="result-grid" style="margin-top:14px;">
+          <div class="result-card err-card">
+            <div class="label" id="errAbsLabel">Galat Mutlak</div>
+            <div class="value" id="valErrAbs" style="color:var(--danger)">—</div>
+          </div>
+          <div class="result-card err-card">
+            <div class="label" id="errRelLabel">Galat Relatif</div>
+            <div class="value" id="valErrRel" style="color:var(--danger)">—</div>
+          </div>
+        </div>
+
+        <!-- Indikator akurasi -->
+        <div class="accuracy-bar" id="accBar" style="display:none;">
+          <div class="acc-label" id="accLabel">Akurasi</div>
+          <div class="acc-track"><div class="acc-fill" id="accFill" style="width:0%"></div></div>
+          <div class="acc-msg" id="accMsg"></div>
+          <div class="acc-suggest" id="accSuggest"></div>
+        </div>
+
+        <p class="error-note" id="errorNote"></p>
+
+        <!-- Grafik -->
+        <div class="graph-wrap">
+          <div id="graphHolder"></div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-swatch line"></span> f(x)</span>
+            <span class="legend-item"><span class="legend-swatch fill"></span> Segiempat pendekatan</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabel iterasi -->
+      <div class="panel">
+        <p class="panel-title">Tabel iterasi</p>
+        <div class="table-scroll">
+          <table id="resultTable">
+            <thead><tr id="tableHeadRow"></tr></thead>
+            <tbody id="tableBody"></tbody>
+            <tfoot id="tableFoot"></tfoot>
+          </table>
+        </div>
+        <div class="steps" id="stepsBox"></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="footnote">Kaidah Segiempat (Rectangle Rule) — Orde galat O(h). Fungsi didukung: + − × ÷ ^, sin cos tan, asin acos atan, exp sqrt abs ln log, konstanta pi dan e.</p>
+</div>
+
+<script>
+/* ============================================================
+   PARSER EKSPRESI MATEMATIKA
+============================================================ */
+const FUNCS={sin:Math.sin,cos:Math.cos,tan:Math.tan,asin:Math.asin,acos:Math.acos,atan:Math.atan,sinh:Math.sinh,cosh:Math.cosh,tanh:Math.tanh,exp:Math.exp,sqrt:Math.sqrt,abs:Math.abs,ln:Math.log,log:Math.log10,log10:Math.log10};
+const CONSTS={pi:Math.PI,e:Math.E};
+
+function tokenize(str){
+  const tokens=[];let i=0;
+  while(i<str.length){
+    const c=str[i];
+    if(/\s/.test(c)){i++;continue;}
+    if(/[0-9.]/.test(c)){
+      let j=i,s='';
+      while(j<str.length&&/[0-9.]/.test(str[j])){s+=str[j];j++;}
+      if(j<str.length&&(str[j]==='e'||str[j]==='E')&&/[0-9+\-]/.test(str[j+1]||'')){
+        s+=str[j];j++;
+        if(str[j]==='+'||str[j]==='-'){s+=str[j];j++;}
+        while(j<str.length&&/[0-9]/.test(str[j])){s+=str[j];j++;}
+      }
+      tokens.push({type:'num',value:parseFloat(s)});i=j;continue;
+    }
+    if(/[a-zA-Z_]/.test(c)){
+      let j=i,s='';
+      while(j<str.length&&/[a-zA-Z_0-9]/.test(str[j])){s+=str[j];j++;}
+      tokens.push({type:'ident',value:s});i=j;continue;
+    }
+    if('+-*/^(),'.includes(c)){tokens.push({type:'op',value:c});i++;continue;}
+    throw new Error('Karakter tidak dikenali: "'+c+'"');
+  }
+  return tokens;
+}
+function insertImplMul(tokens){
+  const out=[];
+  for(let i=0;i<tokens.length;i++){
+    out.push(tokens[i]);
+    const cur=tokens[i],nxt=tokens[i+1];
+    if(!nxt)continue;
+    const cClose=cur.type==='op'&&cur.value===')';
+    const cNum=cur.type==='num';
+    const cIdent=cur.type==='ident'&&!FUNCS.hasOwnProperty(cur.value.toLowerCase());
+    const nOpen=nxt.type==='op'&&nxt.value==='(';
+    const nIdent=nxt.type==='ident';
+    const nNum=nxt.type==='num';
+    let need=false;
+    if(cNum&&(nIdent||nOpen))need=true;
+    if(cClose&&(nNum||nIdent||nOpen))need=true;
+    if(cIdent&&nOpen)need=true;
+    if(need)out.push({type:'op',value:'*'});
+  }
+  return out;
+}
+let _toks=[],_pos=0;
+const _peek=()=>_toks[_pos];
+const _next=()=>_toks[_pos++];
+function _expectOp(v){const t=_next();if(!t||t.type!=='op'||t.value!==v)throw new Error('Diharapkan "'+v+'"');}
+function parseExpr(){
+  let n=parseTerm();
+  while(_peek()&&_peek().type==='op'&&(_peek().value==='+'||_peek().value==='-')){
+    const op=_next().value;n={type:'bin',op,left:n,right:parseTerm()};
+  }
+  return n;
+}
+function parseTerm(){
+  let n=parseUnary();
+  while(_peek()&&_peek().type==='op'&&(_peek().value==='*'||_peek().value==='/')){
+    const op=_next().value;n={type:'bin',op,left:n,right:parseUnary()};
+  }
+  return n;
+}
+function parseUnary(){
+  if(_peek()&&_peek().type==='op'&&(_peek().value==='+'||_peek().value==='-')){
+    const op=_next().value;return{type:'unary',op,node:parseUnary()};
+  }
+  return parsePow();
+}
+function parsePow(){
+  let n=parsePrimary();
+  if(_peek()&&_peek().type==='op'&&_peek().value==='^'){
+    _next();n={type:'bin',op:'^',left:n,right:parseUnary()};
+  }
+  return n;
+}
+function parsePrimary(){
+  const t=_peek();
+  if(!t)throw new Error('Ekspresi tidak lengkap');
+  if(t.type==='num'){_next();return{type:'num',value:t.value};}
+  if(t.type==='op'&&t.value==='('){_next();const n=parseExpr();_expectOp(')');return n;}
+  if(t.type==='ident'){
+    _next();const name=t.value.toLowerCase();
+    if(_peek()&&_peek().type==='op'&&_peek().value==='('){
+      _next();const arg=parseExpr();_expectOp(')');
+      if(!FUNCS.hasOwnProperty(name))throw new Error('Fungsi "'+t.value+'" tidak dikenali');
+      return{type:'call',name,arg};
+    }
+    if(name==='x')return{type:'var'};
+    if(CONSTS.hasOwnProperty(name))return{type:'const',name};
+    throw new Error('Simbol "'+t.value+'" tidak dikenali');
+  }
+  throw new Error('Ekspresi tidak valid di posisi "'+t.value+'"');
+}
+function evalAST(node,x){
+  switch(node.type){
+    case 'num':return node.value;
+    case 'var':return x;
+    case 'const':return CONSTS[node.name];
+    case 'unary':{const v=evalAST(node.node,x);return node.op==='-'?-v:v;}
+    case 'bin':{
+      const l=evalAST(node.left,x),r=evalAST(node.right,x);
+      if(node.op==='+')return l+r;if(node.op==='-')return l-r;
+      if(node.op==='*')return l*r;if(node.op==='/')return l/r;
+      if(node.op==='^')return Math.pow(l,r);break;
+    }
+    case 'call':return FUNCS[node.name](evalAST(node.arg,x));
+  }
+}
+function compileExpression(str){
+  if(!str||!str.trim())throw new Error('Fungsi f(x) belum diisi.');
+  const raw=tokenize(str.trim());
+  _toks=insertImplMul(raw);_pos=0;
+  const ast=parseExpr();
+  if(_pos<_toks.length)throw new Error('Ekspresi tidak valid — periksa penulisan f(x).');
+  return(x)=>evalAST(ast,x);
+}
+function safeEval(f,x){
+  try{const v=f(x);if(typeof v!=='number'||Number.isNaN(v)||!isFinite(v))return null;return v;}
+  catch(e){return null;}
+}
+
+/* ============================================================
+   STATE
+============================================================ */
+let variant='kiri';      // 'kiri' | 'kanan'
+let lastEdited='n';      // 'n' | 'h'  — track which was last changed by user
+
+const PRESETS=[
+  {label:'x² pada [0,2]',f:'x^2',a:'0',b:'2',exact:''},
+  {label:'4x²−x+3 pada [1.5,4.5]',f:'4x^2-x+3',a:'1.5',b:'4.5',exact:'117'},
+  {label:'sin(x) pada [0,π]',f:'sin(x)',a:'0',b:'3.14159265',exact:'2'},
+  {label:'1/(1+x²) pada [0,1]',f:'1/(1+x^2)',a:'0',b:'1',exact:'0.7854'},
+  {label:'eˣ pada [0,1]',f:'exp(x)',a:'0',b:'1',exact:''},
+];
+
+function buildPresets(){
+  const wrap=document.getElementById('presets');wrap.innerHTML='';
+  PRESETS.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='chip';b.textContent=p.label;
+    b.onclick=()=>{
+      document.getElementById('inputF').value=p.f;
+      document.getElementById('inputA').value=p.a;
+      document.getElementById('inputB').value=p.b;
+      document.getElementById('inputExact').value=p.exact;
+      lastEdited='n';
+      syncH();
+      compute();
+    };
+    wrap.appendChild(b);
+  });
+}
+
+function setVariant(v){
+  variant=v;
+  document.getElementById('vbtn-kiri').setAttribute('aria-pressed',v==='kiri');
+  document.getElementById('vbtn-kanan').setAttribute('aria-pressed',v==='kanan');
+  updateFormula();
+  compute();
+}
+
+function updateFormula(){
+  const main=document.getElementById('formulaMain');
+  const expand=document.getElementById('formulaExpand');
+  const desc=document.getElementById('formulaDesc');
+  const tag=document.getElementById('orderTag');
+  const a=parseFloat(document.getElementById('inputA').value)||0;
+  const h=parseFloat(document.getElementById('inputH').value)||0;
+  if(variant==='kiri'){
+    main.textContent='I ≈ h · Σ f(xᵢ),   i = 0, 1, 2, ..., n−1';
+    expand.textContent='xᵢ = a + i·h = '+a.toFixed(4)+' + i × '+h.toFixed(4);
+    desc.textContent='Tinggi segiempat = nilai fungsi di ujung kiri setiap subinterval.';
+  } else {
+    main.textContent='I ≈ h · Σ f(xᵢ),   i = 1, 2, 3, ..., n';
+    expand.textContent='xᵢ = a + i·h = '+a.toFixed(4)+' + i × '+h.toFixed(4);
+    desc.textContent='Tinggi segiempat = nilai fungsi di ujung kanan setiap subinterval.';
+  }
+  tag.textContent='Orde O(h)';
+}
+
+/* ---- n ↔ h synchronisation ---- */
+function syncH(){
+  const a=parseFloat(document.getElementById('inputA').value);
+  const b=parseFloat(document.getElementById('inputB').value);
+  const n=parseFloat(document.getElementById('inputN').value);
+  if(!isFinite(a)||!isFinite(b)||!isFinite(n)||n<=0||b<=a)return;
+  const h=(b-a)/n;
+  document.getElementById('inputH').value=fmt(h,6);
+  document.getElementById('inputH').classList.remove('auto-filled');
+  document.getElementById('inputN').classList.add('auto-filled');
+}
+function syncN(){
+  const a=parseFloat(document.getElementById('inputA').value);
+  const b=parseFloat(document.getElementById('inputB').value);
+  const h=parseFloat(document.getElementById('inputH').value);
+  if(!isFinite(a)||!isFinite(b)||!isFinite(h)||h<=0||b<=a)return;
+  const n=Math.max(1,Math.round((b-a)/h));
+  document.getElementById('inputN').value=n;
+  document.getElementById('inputN').classList.remove('auto-filled');
+  document.getElementById('inputH').classList.add('auto-filled');
+}
+
+function onNChange(){ lastEdited='n'; syncH(); updateFormula(); }
+function onHChange(){ lastEdited='h'; syncN(); updateFormula(); }
+function onBoundChange(){
+  if(lastEdited==='n') syncH();
+  else syncN();
+  updateFormula();
+}
+
+function resetAll(){
+  variant='kiri'; lastEdited='n';
+  document.getElementById('inputF').value='x^2';
+  document.getElementById('inputA').value='0';
+  document.getElementById('inputB').value='2';
+  document.getElementById('inputN').value='8';
+  document.getElementById('inputExact').value='';
+  syncH();
+  setVariant('kiri');
+}
+
+/* ============================================================
+   FORMAT & STATUS
+============================================================ */
+function fmt(n,d=6){
+  if(Number.isNaN(n))return'NaN';
+  if(!isFinite(n))return n>0?'∞':'−∞';
+  return n.toFixed(d);
+}
+function showError(msg){
+  const box=document.getElementById('statusBox');
+  box.textContent=msg;box.classList.add('show');
+}
+function clearError(){
+  const box=document.getElementById('statusBox');
+  box.textContent='';box.classList.remove('show');
+}
+
+// Pengaturan desimal untuk tampilan kartu hasil (segiempat)
+let segDecimals = 6;
+let segLastResults = null;
+function changeSegDecimals(delta){
+  segDecimals = Math.max(0, Math.min(12, segDecimals + delta));
+  const el = document.getElementById('seg-dec-val'); if(el) el.textContent = segDecimals;
+  if(segLastResults){
+    renderResults(segLastResults.h, segLastResults.I, segLastResults.reference, segLastResults.isExact, segLastResults.f, segLastResults.a, segLastResults.b, segLastResults.n);
+  }
+}
+
+/* ============================================================
+   REFERENSI AKURASI TINGGI (n=5000)
+============================================================ */
+function estimateReference(f,a,b){
+  const N=5000,hh=(b-a)/N;let s=0;
+  for(let i=0;i<N;i++){const mi=a+(i+0.5)*hh;const v=safeEval(f,mi);if(v!==null)s+=v;}
+  return hh*s;
+}
+
+/* ============================================================
+   COMPUTE
+============================================================ */
+function compute(){
+  clearError();
+  const fStr=document.getElementById('inputF').value.trim();
+  const a=parseFloat(document.getElementById('inputA').value);
+  const b=parseFloat(document.getElementById('inputB').value);
+  const nRaw=parseFloat(document.getElementById('inputN').value);
+  const n=Math.round(nRaw);
+  const exactStr=document.getElementById('inputExact').value.trim();
+  const hasExact=exactStr!==''&&!Number.isNaN(parseFloat(exactStr));
+  const exact=hasExact?parseFloat(exactStr):null;
+
+  if(Number.isNaN(a)||Number.isNaN(b)){showError('Batas a dan b harus berupa angka.');return;}
+  if(b<=a){showError('Batas atas (b) harus lebih besar dari batas bawah (a).');return;}
+  if(Number.isNaN(nRaw)||nRaw<1){showError('Jumlah subinterval (n) harus ≥ 1.');return;}
+  if(!Number.isInteger(nRaw)){showError('Jumlah subinterval (n) harus bilangan bulat (bukan desimal).');return;}
+  if(n>5000){showError('Jumlah subinterval maksimum 5000 untuk divisualisasikan.');return;}
+
+  let f;
+  try{
+    f=compileExpression(fStr);
+    const probe=f((a+b)/2);
+    if(typeof probe!=='number')throw new Error('Fungsi tidak menghasilkan nilai numerik.');
+  }catch(err){showError('Periksa ekspresi f(x): '+err.message);return;}
+
+  const h=(b-a)/n;
+  // Pastikan tampilan h & n sinkron
+  document.getElementById('inputH').value=fmt(h,6);
+
+  const rows=[];let badPoint=null;
+
+  if(variant==='kiri'){
+    for(let i=0;i<n;i++){
+      const xi=a+i*h;
+      const fi=safeEval(f,xi);
+      if(fi===null&&badPoint===null)badPoint=xi;
+      rows.push({i,x:xi,fx:fi,left:xi,right:xi+h});
+    }
+  } else {
+    for(let i=1;i<=n;i++){
+      const xi=a+i*h;
+      const fi=safeEval(f,xi);
+      if(fi===null&&badPoint===null)badPoint=xi;
+      rows.push({i,x:xi,fx:fi,left:xi-h,right:xi});
+    }
+  }
+
+  if(badPoint!==null){
+    showError('Fungsi tidak terdefinisi pada x ≈ '+fmt(badPoint,4)+'. Periksa domain fungsi.');
+    return;
+  }
+
+  const sum=rows.reduce((acc,r)=>acc+r.fx,0);
+  const I=h*sum;
+
+  const reference=hasExact?exact:estimateReference(f,a,b);
+  const isExact=hasExact;
+  updateFormula();
+  // simpan hasil terakhir supaya bisa dirender ulang saat pengguna mengubah jumlah desimal
+  segLastResults = {h,I,reference,isExact,f,a,b,n};
+  renderResults(h,I,reference,isExact,f,a,b,n);
+  renderTable(rows,h,I);
+  renderGraph(f,a,b,h,rows);
+}
+
+/* ============================================================
+   RENDER HASIL
+============================================================ */
+function renderResults(h,I,reference,isExact,f,a,b,n){
+  document.getElementById('valH').textContent=fmt(h, segDecimals);
+  document.getElementById('valI').textContent=fmt(I, segDecimals);
+
+  const errAbs=Math.abs(reference-I);
+  const errRel=reference!==0?(errAbs/Math.abs(reference))*100:null;
+
+  document.getElementById('valErrAbs').textContent=fmt(errAbs, segDecimals);
+  document.getElementById('valErrRel').textContent=errRel===null?'tak terdefinisi':fmt(errRel, segDecimals)+'%';
+  document.getElementById('errAbsLabel').textContent=isExact?'Galat Mutlak':'Galat Mutlak (est.)';
+  document.getElementById('errRelLabel').textContent=isExact?'Galat Relatif':'Galat Relatif (est.)';
+
+  const note=document.getElementById('errorNote');
+  note.textContent=isExact
+    ?'Galat dihitung terhadap nilai eksak ∫f(x)dx = '+fmt(reference, segDecimals)+' yang Anda masukkan.'
+    :'Nilai eksak tidak diisi — galat dibandingkan terhadap pendekatan resolusi tinggi (n=5000) ≈ '+fmt(reference, segDecimals)+'.';
+
+  // Indikator akurasi
+  const bar=document.getElementById('accBar');
+  const accLabel=document.getElementById('accLabel');
+  const accFill=document.getElementById('accFill');
+  const accMsg=document.getElementById('accMsg');
+  const accSuggest=document.getElementById('accSuggest');
+
+  if(errRel===null){bar.style.display='none';return;}
+  bar.style.display='block';
+
+  // Akurasi = 100% - errRel, clamp 0..100
+  const accuracy=Math.max(0,Math.min(100,100-errRel));
+  accFill.style.width=accuracy.toFixed(1)+'%';
+
+  bar.className='accuracy-bar';
+  if(errRel<5){
+    bar.classList.add('good');
+    accLabel.textContent='✓ Akurasi Tinggi ('+fmt(100-errRel,2)+'%)';
+    accMsg.textContent='Galat relatif '+fmt(errRel,4)+'% — hasil sudah sangat dekat dengan nilai referensi.';
+    accSuggest.textContent='';
+  } else if(errRel<15){
+    bar.classList.add('warn');
+    accLabel.textContent='⚠ Akurasi Sedang ('+fmt(100-errRel,2)+'%)';
+    accMsg.textContent='Galat relatif '+fmt(errRel,4)+'% — pertimbangkan untuk memperbesar n atau memperkecil h.';
+    const suggestN=Math.ceil(n*(errRel/3));
+    const suggestH=fmt((b-a)/suggestN,4);
+    accSuggest.textContent='Saran: coba n ≥ '+suggestN+' (h ≈ '+suggestH+') untuk menurunkan galat ke sekitar 3%.';
+  } else {
+    bar.classList.add('bad');
+    accLabel.textContent='✗ Galat Besar ('+fmt(errRel,2)+'%)';
+    accMsg.textContent='Galat relatif '+fmt(errRel,2)+'% — Kaidah Segiempat dengan n kecil kurang akurat untuk fungsi ini.';
+    const suggestN=Math.ceil(n*(errRel/3));
+    const suggestH=fmt((b-a)/suggestN,4);
+    accSuggest.textContent='Saran: coba n ≥ '+suggestN+' (h ≈ '+suggestH+') untuk galat < 3%, atau gunakan Kaidah Titik Tengah.';
+  }
+}
+
+/* ============================================================
+   RENDER TABEL
+============================================================ */
+function renderTable(rows,h,I){
+  const headRow=document.getElementById('tableHeadRow');
+  const body=document.getElementById('tableBody');
+  const foot=document.getElementById('tableFoot');
+  const steps=document.getElementById('stepsBox');
+
+  headRow.innerHTML='<th>i</th><th>xᵢ</th><th>f(xᵢ)</th><th>h·f(xᵢ)</th>';
+  body.innerHTML='';
+
+  const MAX=100;
+  const renderRow=r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td>'+r.i+'</td><td>'+fmt(r.x,4)+'</td><td>'+fmt(r.fx,6)+'</td><td>'+fmt(r.fx*h,6)+'</td>';
+    body.appendChild(tr);
+  };
+  if(rows.length<=MAX){
+    rows.forEach(renderRow);
+  } else {
+    rows.slice(0,10).forEach(renderRow);
+    const tr=document.createElement('tr');tr.className='ellipsis';
+    tr.innerHTML='<td colspan="4">⋯ '+(rows.length-20)+' baris disembunyikan ⋯</td>';
+    body.appendChild(tr);
+    rows.slice(-10).forEach(renderRow);
+  }
+
+  const sum=rows.reduce((acc,r)=>acc+r.fx,0);
+  foot.innerHTML='<tr><td>Σ</td><td>—</td><td>'+fmt(sum,6)+'</td><td>'+fmt(I,6)+'</td></tr>';
+
+  if(rows.length<=12){
+    const list=rows.map(r=>fmt(r.fx,4)).join(' + ');
+    steps.textContent='I ≈ h × ['+list+'] = '+fmt(h,4)+' × '+fmt(sum,4)+' = '+fmt(I,6);
+  } else {
+    steps.textContent='I ≈ h × Σ f(xᵢ) = '+fmt(h,6)+' × '+fmt(sum,6)+' = '+fmt(I,6);
+  }
+}
+
+/* ============================================================
+   RENDER GRAFIK SVG
+============================================================ */
+function renderGraph(f,a,b,h,rows){
+  const holder=document.getElementById('graphHolder');
+  const W=760,H=360;
+  const mL=46,mR=18,mT=18,mB=34;
+  const pW=W-mL-mR,pH=H-mT-mB;
+  const span=b-a;
+  const dMin=a-span*0.08,dMax=b+span*0.08;
+
+  const N=240,samples=[];
+  for(let k=0;k<=N;k++){
+    const x=dMin+(dMax-dMin)*k/N;
+    samples.push({x,y:safeEval(f,x)});
+  }
+
+  const finiteYs=samples.filter(s=>s.y!==null).map(s=>s.y).concat(rows.map(r=>r.fx)).concat([0]);
+  let yMin=Math.min(...finiteYs),yMax=Math.max(...finiteYs);
+  if(yMin===yMax){yMin-=1;yMax+=1;}
+  const padY=(yMax-yMin)*0.12;yMin-=padY;yMax+=padY;
+
+  const sx=x=>mL+(x-dMin)/(dMax-dMin)*pW;
+  const sy=y=>mT+pH-(y-yMin)/(yMax-yMin)*pH;
+
+  let pathD='',drawing=false;
+  samples.forEach(s=>{
+    if(s.y===null){drawing=false;return;}
+    pathD+=(drawing?' L ':' M ')+sx(s.x).toFixed(2)+','+sy(s.y).toFixed(2);
+    drawing=true;
+  });
+
+  const thin=rows.length<=60;
+  let rects='';
+  rows.forEach(r=>{
+    if(r.fx===null)return;
+    const x1=sx(r.left),x2=sx(r.right),y0=sy(0),yh=sy(r.fx);
+    const rx=Math.min(x1,x2),rw=Math.abs(x2-x1);
+    const ry=Math.min(y0,yh),rh=Math.abs(yh-y0)||0.6;
+    rects+='<rect x="'+rx.toFixed(2)+'" y="'+ry.toFixed(2)+'" width="'+rw.toFixed(2)+'" height="'+rh.toFixed(2)+'" fill="var(--teal-dim)" stroke="'+(thin?'var(--teal)':'none')+'" stroke-width="1"/>';
+  });
+
+  const axY=(yMin<=0&&0<=yMax)?sy(0):null;
+  const axX=(dMin<=0&&0<=dMax)?sx(0):null;
+  const xa=sx(a),xb=sx(b);
+
+  let svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Grafik kaidah segiempat" style="display:block;">';
+  svg+='<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="none"/>';
+  if(axY!==null)svg+='<line x1="'+mL+'" y1="'+axY.toFixed(2)+'" x2="'+(W-mR)+'" y2="'+axY.toFixed(2)+'" stroke="var(--offwhite-dim)" stroke-width="1"/>';
+  if(axX!==null)svg+='<line x1="'+axX.toFixed(2)+'" y1="'+mT+'" x2="'+axX.toFixed(2)+'" y2="'+(H-mB)+'" stroke="var(--offwhite-dim)" stroke-width="1"/>';
+  svg+='<line x1="'+xa.toFixed(2)+'" y1="'+mT+'" x2="'+xa.toFixed(2)+'" y2="'+(H-mB)+'" stroke="var(--offwhite-dim)" stroke-width="1" stroke-dasharray="3,4"/>';
+  svg+='<line x1="'+xb.toFixed(2)+'" y1="'+mT+'" x2="'+xb.toFixed(2)+'" y2="'+(H-mB)+'" stroke="var(--offwhite-dim)" stroke-width="1" stroke-dasharray="3,4"/>';
+  svg+='<text x="'+xa.toFixed(2)+'" y="'+(H-mB+18)+'" font-size="11" fill="var(--offwhite-dim)" text-anchor="middle" font-family="SFMono-Regular,Consolas,monospace">a='+fmt(a,2)+'</text>';
+  svg+='<text x="'+xb.toFixed(2)+'" y="'+(H-mB+18)+'" font-size="11" fill="var(--offwhite-dim)" text-anchor="middle" font-family="SFMono-Regular,Consolas,monospace">b='+fmt(b,2)+'</text>';
+  svg+=rects;
+  svg+='<path d="'+pathD+'" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>';
+  svg+='</svg>';
+  holder.innerHTML=svg;
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+buildPresets();
+syncH();
+updateFormula();
+compute();
+</script>
+</body>
+</html>
